@@ -27,7 +27,7 @@ connection.commit() # code PCT-001 和Pct-001并存
 def before_work():
     '''import sampleType data from the csv data exported by Dbeaver'''
 
-    sample_type_data = pd.read_csv("/Users/har/Desktop/T_SampleType.csv")
+    sample_type_data = pd.read_csv("/Users/har/Desktop/data_import/T_SampleType.csv")
     sample_type_data = sample_type_data[['sampleTypeId', 'name','nameChs','dataType','unit','description','shortDescription']]
 
     def data_type_trans(x):
@@ -75,7 +75,7 @@ def gen_all_tag_data():
     '''
     g_map = {0:'', 1:'疾病', 2:'风险', 3:'描述', 4:'统计'}
     all_tag_data = {} # k:关键词,value:标签类型，系统，子分类, code
-    data = pd.read_excel('/Users/har/Desktop/标签latest.xlsx',sheet_name='描述标签')
+    data = pd.read_excel('/Users/har/Desktop/data_import/标签latest.xlsx',sheet_name='描述标签')
     data[['系统', '分类']] = data[['系统', '分类']].fillna('其它')
     for d in data.values:
         if d[2] in all_tag_data.keys():
@@ -84,7 +84,7 @@ def gen_all_tag_data():
     # print(all_tag_data)
 
 
-    data1 = pd.read_excel('/Users/har/Desktop/标签latest.xlsx',sheet_name='风险标签')
+    data1 = pd.read_excel('/Users/har/Desktop/data_import/标签latest.xlsx',sheet_name='风险标签')
     data1 = data1[['系统', '分类', '关键词','风险代码']]
 
     def tag_trans(x):
@@ -108,7 +108,7 @@ def gen_all_tag_data():
             all_tag_data[d[2]] = {'类型':2, '系统':d[0], '子分类':d[1],'code':d[3]}
     # print(all_tag_data)
 
-    data2 = pd.read_excel('/Users/har/Desktop/标签latest.xlsx',sheet_name='疾病标签')
+    data2 = pd.read_excel('/Users/har/Desktop/data_import/标签latest.xlsx',sheet_name='疾病标签')
     data2 = data2[['系统', '分类', '关键词', '风险代码']]
     # data2.head()
     data2['风险代码'] = data2['风险代码'].map(tag_trans)
@@ -123,7 +123,7 @@ def gen_all_tag_data():
             all_tag_data[d[2]] = {'类型':1, '系统':d[0], '子分类':d[1], 'code':d[3]}
     
 
-    # data3 = pd.read_excel('/Users/har/Desktop/个人-统计标签映射表textjoin后.xlsx',sheet_name='Sheet1')
+    # data3 = pd.read_excel('/Users/har/Desktop/data_import/个人-统计标签映射表textjoin后.xlsx',sheet_name='Sheet1')
     # data3 = data3.iloc[:, :3]
     # # data3.head()
     # for d in data3.values:
@@ -133,14 +133,14 @@ def gen_all_tag_data():
     #                 # print(d)
     #                 raise Exception('团体标签:{} 在标签表中不存在!'.format(d))
 
-    with open('/Users/har/Desktop/all_tag_data.json', 'w') as f:
+    with open('/Users/har/Desktop/data_import/all_tag_data.json', 'w') as f:
         json.dump(all_tag_data, f, ensure_ascii=False, indent=4)
 
 
 gen_all_tag_data()
 
 
-with open('/Users/har/Desktop/all_tag_data.json', 'r') as f:
+with open('/Users/har/Desktop/data_import/all_tag_data.json', 'r') as f:
     all_tag_data = json.load(f)
 
 
@@ -154,7 +154,7 @@ def import_taggroup():
             taggroup_data.append(temp_data)
     # print(len(taggroup_data))#[['内分泌代谢-性激素', 1]]
     # 补充团体标签组
-    data3 = pd.read_excel('/Users/har/Desktop/个人-统计标签映射表textjoin后.xlsx',sheet_name='Sheet1')
+    data3 = pd.read_excel('/Users/har/Desktop/data_import/个人-统计标签映射表textjoin后.xlsx',sheet_name='Sheet1')
     data3 = data3.iloc[:, :3]
     for d in data3.values:
         if d[2] and not [d[0] + '-' + d[1], 4] in taggroup_data:
@@ -207,7 +207,7 @@ def import_taggroupmembers():
     # print(len(taggroupmembers_map))
 
     # 补充团体标签数据
-    data3 = pd.read_excel('/Users/har/Desktop/个人-统计标签映射表textjoin后.xlsx',sheet_name='Sheet1')
+    data3 = pd.read_excel('/Users/har/Desktop/data_import/个人-统计标签映射表textjoin后.xlsx',sheet_name='Sheet1')
     data3 = data3.iloc[:, :3]
     for v in data3.values:
         if v[2]:
@@ -269,7 +269,7 @@ def import_sampletypegroupmembers():
 def import_samplerisk(sp_name_to_id):
     '''foreign key:sampletype,tag'''
 
-    with open('/Users/har/Desktop/deds.json') as f:
+    with open('/Users/har/Desktop/data_import/deds.json') as f:
         ded_data = json.load(f)
     pattern = re.compile("'code': '(.*?)'")
     all_risk_codes = pattern.findall(str(ded_data))
@@ -313,7 +313,7 @@ def import_samplerisk(sp_name_to_id):
                         tag_ids = [None]
 
                     for tag_id in tag_ids:
-                        data = [r['code'],r['color'], r['tip'], str(ideal), r['level'], int(sp_name_to_id[key]), tag_id]
+                        data = [r['code'],r['color'], r['tip'], json.dumps(str(ideal)), r['level'], int(sp_name_to_id[key]), tag_id]
                         sample_risk.append(data)
             
         # print(sample_risk)
