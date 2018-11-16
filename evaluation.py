@@ -49,15 +49,13 @@ def gen_st_names(s_t):
     return st_names
 
 
-def col_values_check(data, st_names, result):
+def col_values_check(data, st_names, s_t, result):
     """检查data中各列数据的合法性
         先决条件:
                 1.data中的带检查列(col)数据类型为['int64', 'float64']
                 2.data中的带检查列(col)与prc中的st有关联--存在或相似
     """
     legal_cols = set()
-    i = 0
-    s_t = pd.read_csv('/Users/har/Desktop/T_SampleType_201811121655.csv')
     for col in data.columns:
         likely_name = set()
         if st_names.get(col):
@@ -97,7 +95,7 @@ def col_values_check(data, st_names, result):
                     # legal_range为prc中defaultRange允许的最大范围
                     if data[col].min() < float(legal_range['min']) or \
                         data[col].max() > float(legal_range['max']):
-                        sorted_col = sorted(data[col].dropna())
+                        sorted_col = np.sort(data[col].dropna())
                         illegal_min = bisect_left(sorted_col, legal_range['min'])
                         illegal_max = len(sorted_col) - bisect_right(sorted_col, legal_range['max'])
                         (illegal_min + illegal_max) / len(data[col])
@@ -139,7 +137,7 @@ def highlight_illegal_max_min(data, attr):
 def evaluation(data, s_t, output_path='/Users/har/Desktop/安徽电信2018数据/evaluation.xls'):
     st_names = gen_st_names(s_t)
     evaluation = col_type_cnt(data)
-    col_values_check(data, st_names, evaluation)
+    col_values_check(data, st_names, s_t, evaluation)
     df1 = pd.DataFrame(evaluation)
     df = pd.concat([df1, data.describe(include='all').loc[['unique', 'top', 'freq', 'min', 'max']]], sort=False)
     style_df = df.T.style.\
