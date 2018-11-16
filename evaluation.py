@@ -1,6 +1,7 @@
 """处理包含体检数据的excel文档"""
 import json
 from collections import Counter, defaultdict
+from bisect import bisect_left, bisect_right
 
 import jieba
 import numpy as np
@@ -91,22 +92,18 @@ def col_values_check(data, st_names, result):
                                     legal_range['min'] = v[0]
                                 if legal_range.setdefault('max', v[1]) < v[1]:
                                     legal_range['max'] = v[1]
-                        legal_range
                     elif isinstance(the_range, list):
                         legal_range = {'min': the_range[0], 'max': the_range[1]}
                     # legal_range为prc中defaultRange允许的最大范围
                     if data[col].min() < float(legal_range['min']) or \
                         data[col].max() > float(legal_range['max']):
-                        for pct1 in range(100, 0, -1):
-                            if np.percentile(data[col], pct1) > data[col].min():
-                                for pct2 in range(100, 0, -1):
-                                    if np.percentile(data[col], pct2) < data[col].max():
-                                        result[col].update({'非法数据': f'约{pct1 - pct2}%', '合法范围': [legal_range['min'], legal_range['max']]})
-                                        break
-                                break
-                        break
+                        sorted_col = sorted(data[col].dropna())
+                        illegal_min = bisect_left(sorted_col, legal_range['min'])
+                        illegal_max = len(sorted_col) - bisect_right(sorted_col, legal_range['max'])
+                        (illegal_min + illegal_max) / len(data[col])
+                        result[col].update({'非法数据': f'约{(illegal_min + illegal_max) / len(data[col])*100:.2f}%', '合法范围': [legal_range['min'], legal_range['max']]})
                     else:
-                        result[col].update({'非法数据': '0', '合法范围': [legal_range['min'], legal_range['max']]})
+                        result[col].update({'非法数据': '0%', '合法范围': [legal_range['min'], legal_range['max']]})
 
 
 def highlight_max_data(data, attr):
@@ -123,7 +120,7 @@ def highlight_illegal_data(data):
     if isinstance(data, str):
         if '约' in data:
             return 'color: red'
-        elif data == '0':
+        elif data == '0%':
             return 'color: green'
     else:
         return ''
@@ -132,14 +129,14 @@ def highlight_illegal_data(data):
 def highlight_illegal_max_min(data, attr):
     illegal = [False, False, False, False]
     if '约' in str(data['非法数据']):
-        if data['min'] < data['合法范围'][0]:
+        if data['min'] < data['合法范围'][0] or data['min'] > data['合法范围'][1]:
             illegal[2] = True
-        if data['max'] > data['合法范围'][1]:
+        if data['max'] > data['合法范围'][1] or data['max'] < data['合法范围'][0]:
             illegal[3] = True
     return [attr if v else '' for v in illegal]
 
 
-def evaluation(data, s_t, output_path='/Users/har/Desktop/evaluation.xls'):
+def evaluation(data, s_t, output_path='/Users/har/Desktop/安徽电信2018数据/evaluation.xls'):
     st_names = gen_st_names(s_t)
     evaluation = col_type_cnt(data)
     col_values_check(data, st_names, evaluation)
@@ -151,6 +148,6 @@ def evaluation(data, s_t, output_path='/Users/har/Desktop/evaluation.xls'):
 
     style_df.to_excel(output_path, engine='openpyxl', float_format='%.3f')
 
-merged = pd.read_excel('/Users/har/Desktop/merged.xls')
-s_t = pd.read_csv('/Users/har/Desktop/T_SampleType_201811121655.csv')
-evaluation(merged, s_t, '/Users/har/Desktop/evaluation_1.xls')
+merged = pd.read_excel('/Users/har/Desktop/安徽电信2018数据/merged.xls')
+s_t = pd.read_csv('/Users/har/Desktop/安徽电信2018数据/T_SampleType_201811121655.csv')
+evaluation(merged, s_t, '/Users/har/Desktop/安徽电信2018数据/evaluation_1.xls')
