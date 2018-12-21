@@ -2,13 +2,9 @@
 __pycache__/
 *.py[cod]
 *$py.class
-*.json
-*.xlsx
-*.csv
 .DS_Store
 # C extensions
 *.so
-*.txt
 
 # Distribution / packaging
 .Python
@@ -106,3 +102,9 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# my custom
+*.txt
+*.json
+*.xlsx
+*.csv
