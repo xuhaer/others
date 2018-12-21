@@ -7,7 +7,7 @@ import jieba
 import numpy as np
 import pandas as pd
 
-# jieba.load_userdict('./match_dict.txt.txt')
+jieba.load_userdict('./match_dict.txt')
 
 
 def col_type(x):
@@ -41,7 +41,7 @@ def predict_st_names(df, result):
         likely_name = []
         # 默认col为联级列名
         # 如果col为: `一般检查-身高`, 不直接把 `一般检查-身高` 拿去分词, 后续col取 `身高`
-        sub_col = col.split('-')[-1]
+        sub_col = col.split('——')[-1]#fix: Apo-B
         if predict_map.get(sub_col):
             result[col].update({'匹配列名': predict_map[sub_col]})
         else:
@@ -84,7 +84,7 @@ def highlight_mixedtype_data(data):
     """若该列既有str类型，又有numeric 类型则输出为红色"""
     if data.isnull().values.any():
         return ['', '']
-    return ['color: red', 'color: red']
+    return ['background-color: red', 'background-color: red']
     # if data.ndim == 1:
     #     is_max = data == data.max()
     #     return [attr if v else '' for v in is_max]
@@ -95,17 +95,24 @@ def highlight_mixedtype_data(data):
 
 
 def highlight_unnormal_col(data):
-    '该列指标异常值百分比大于30%返回红色cell'
+    """该列指标异常值百分比大于30%返回红色cell"""
     if isinstance(data, str):
         return 'color: red' if float(data.replace('%', '')) >= 30 else 'color: green'
     else:
         return ''
 
 
+def highlight_mot_matched_data(data):
+    """若该col既无`匹配列名`, 又无`相似列名`则输出为红色"""
+    if data.isnull().values.all():
+        return ['background-color: #e0e0eb', 'background-color: #e0e0eb']
+    return ['color: green', '']
+
+
 def main(input_path, output_path, header=[0]):
     if header != [0]:
         input_df = pd.read_excel(input_path, header=header)
-        input_df.columns = input_df.columns.map(lambda x: '-'.join(x) if 'Unnamed' not in x[1] else x[0])
+        input_df.columns = input_df.columns.map(lambda x: '——'.join(x) if 'Unnamed' not in x[1] else x[0])
         input_df.reset_index(drop=True, inplace=True)
         input_df.drop_duplicates(inplace=True)
     else:
@@ -120,14 +127,15 @@ def main(input_path, output_path, header=[0]):
     try:
         style_df = output_df.style.\
             applymap(highlight_unnormal_col, subset=['指标异常比例']).\
-            apply(highlight_mixedtype_data, axis=1, subset=['numeric', 'str'])
-        style_df.to_excel(output_path, engine='openpyxl', float_format='%.3f')
+            apply(highlight_mixedtype_data, axis=1, subset=['numeric', 'str']).\
+            apply(highlight_mot_matched_data, axis=1, subset=['匹配列名', '相似列名'])
     except AttributeError as e:
-        print(f'染色失败: {e}, 已通过不染色方式输出.')
+        print(f'style_df 染色失败: {e}, 已通过不染色方式输出.')
         output_df.to_excel(output_path, float_format='%.3f')
+    style_df.to_excel(output_path, engine='openpyxl', float_format='%.3f')
 
 
 if __name__ == '__main__':
-    input_path = '/Users/har/Desktop/许某/2018质检中心_表头合并后.xls'
-    output_path = '/Users/har/Desktop/许某/2018质检中心_表头合并后_eval.xls'
+    input_path = '/Users/har/Desktop/yz2018_cleaned_joined.xlsx'
+    output_path = '/Users/har/Desktop/yz2018_cleaned_joined_eval.xls'
     main(input_path, output_path, header=[0])
