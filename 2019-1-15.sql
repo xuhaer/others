@@ -3,7 +3,7 @@ FROM(
     SELECT * 
     FROM (
         SELECT  
-            ROW_NUMBER() OVER (PARTITION BY t.testId, t.userId, s.sampleTypeId ORDER BY t.testId) AS RowNum,
+            ROW_NUMBER() OVER (PARTITION BY t.userId, s.sampleTypeId ORDER BY t.userId) AS RowNum,
             t.testId AS testId, t.userId AS userId,
             s.sampleId, s.sampleTypeId, s.value,s.unit
         FROM HMP3.dbo.T_Test AS t
