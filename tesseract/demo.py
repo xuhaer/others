@@ -1,20 +1,21 @@
 import glob
+import time
 
-from random import randint
+import tempfile
 
-import pytesseract
-import pdf2image
-import numpy as np
-import cv2
 from PIL import Image
+import numpy as np
+import pytesseract
+import cv2
+import pdf2image
 from pdf2image import convert_from_path
 
 
 def pdf_2_image(path='/Users/har/Desktop/test_data.pdf'):
-    first_page = randint(17, 300)
-    images = convert_from_path(PATH_, dpi=96, thread_count=2)
+    with tempfile.TemporaryDirectory() as temp_path:
+        images = convert_from_path(path, dpi=96, thread_count=2, output_folder=temp_path)
     for index, image in enumerate(images, start=1):
-        image.save(f'./datasets/pdf_imgs/test_{index}.png')
+        image.save(f'./datasets/pdf_imgs/第{index}页.png')
 
 
 class CV2Process:
@@ -23,7 +24,7 @@ class CV2Process:
     def __init__(self, img_folder='./datasets/pdf_imgs/*.png', min_acontourAre=50000):
         self.min_acontourAre = min_acontourAre
         self.pdf_imgs = glob.glob(img_folder)
-    
+
     def find_contours(self, img):
         """给定一页 pdf(图片), 返回该页所有包含蛇类的contours"""
         # 转为灰度图
@@ -40,7 +41,7 @@ class CV2Process:
         # 梯度图像中不大于90的任何像素都设置为0(黑色), 否则，像素设置为255(白色)
         _, thresh = cv2.threshold(blurred, 90, 255, cv2.THRESH_BINARY)
 
-        contours_, contours_property= cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours_, contours_property = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         snake_contours = list(filter(lambda ct: cv2.contourArea(ct) > self.min_acontourAre, contours_))
         return snake_contours
 
@@ -57,3 +58,10 @@ class CV2Process:
                 height, width = y2 - y1, x2 - x1
                 cropImg = img[y1:y1 + height, x1:x1 + width]
                 cv2.imwrite(f'./datasets/snake_imgs/test{index}.png', cropImg)
+
+if __name__ == '__main__':
+    start = time.time()
+    pdf_2_image()
+    total_time = time.time() - start
+    with open('total_time.txt', 'w') as f:
+        f.write(str(total_time))
