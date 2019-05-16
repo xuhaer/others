@@ -108,3 +108,4 @@ venv.bak/
 *.json
 *.xlsx
 *.csv
+*.png
