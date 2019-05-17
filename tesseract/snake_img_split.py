@@ -13,7 +13,7 @@ def pdf_2_image(path='/Users/har/Desktop/test_data.pdf'):
     with tempfile.TemporaryDirectory() as temp_path:
         images = convert_from_path(path, dpi=96, thread_count=2, output_folder=temp_path)
     for index, image in enumerate(images, start=1):
-        image.save(f'./datasets/pdf_imgs/第{index}页.png')
+        image.save(f'./datasets/pdf_imgs_上册/第{index}页.png')
 
 
 class CV2Process:
