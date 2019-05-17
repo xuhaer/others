@@ -1,13 +1,11 @@
+import re
 import glob
 import time
 
 import tempfile
 
-from PIL import Image
 import numpy as np
-import pytesseract
 import cv2
-import pdf2image
 from pdf2image import convert_from_path
 
 
@@ -21,14 +19,28 @@ def pdf_2_image(path='/Users/har/Desktop/test_data.pdf'):
 class CV2Process:
     """将单页的 pdf 图片进行处理，并从中提取出蛇类的图片"""
 
-    def __init__(self, img_folder='./datasets/pdf_imgs/*.png', min_acontourAre=50000):
+    def __init__(self, path='./datasets/test_pdf_imgs/*.png', min_acontourAre=50000):
         self.min_acontourAre = min_acontourAre
-        self.pdf_imgs = glob.glob(img_folder)
+        self.im_paths = glob.glob(path)
+        self.croped_images = {}
 
-    def find_contours(self, img):
-        """给定一页 pdf(图片), 返回该页所有包含蛇类的contours"""
+    def gen_crop_images(self):
+        """将原始 pdf 页初处理并以{page: img}的形式存储"""
+        for im_path in self.im_paths:
+            img = cv2.imread(im_path)
+            page = int(re.findall(r'第(\d+)页', im_path)[0])
+            if page % 2:
+                # 有右上侧栏:
+                croped_img = img[155: -1, 8:-145]
+            else:
+                # 有左侧栏
+                croped_img = img[1:-1, 330:-6]
+            self.croped_images[page] = croped_img
+
+    def find_contours(self, croped_image, page):
+        """给定crop_image, 返回该页所有包含蛇类的contours"""
         # 转为灰度图
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        gray = cv2.cvtColor(croped_image, cv2.COLOR_BGR2GRAY)
 
         # 留下具有高水平梯度和低垂直梯度的图像区域
         gradX = cv2.Sobel(gray, ddepth=cv2.CV_64F, dx=1, dy=0, ksize=-1)
@@ -37,7 +49,7 @@ class CV2Process:
         gradient = cv2.convertScaleAbs(gradient)
 
         # 去除图像上的噪声
-        blurred = cv2.blur(gradient, (9, 9))
+        blurred = cv2.blur(gradient, (15, 15))
         # 梯度图像中不大于90的任何像素都设置为0(黑色), 否则，像素设置为255(白色)
         _, thresh = cv2.threshold(blurred, 90, 255, cv2.THRESH_BINARY)
 
@@ -46,9 +58,9 @@ class CV2Process:
         return snake_contours
 
     def save_contours(self):
-        for pdf_img in self.pdf_imgs:
-            img = cv2.imread(pdf_img)
-            for index, snake_ct in enumerate(self.find_contours(img)):
+        self.gen_crop_images()
+        for page, croped_image in self.croped_images.items():
+            for index, snake_ct in enumerate(self.find_contours(croped_image, page), start=1):
                 rect = cv2.minAreaRect(snake_ct)
                 box = np.int0(cv2.boxPoints(rect))
                 Xs = [i[0] for i in box]
@@ -56,12 +68,13 @@ class CV2Process:
                 x1, x2 = min(Xs), max(Xs)
                 y1, y2 = min(Ys), max(Ys)
                 height, width = y2 - y1, x2 - x1
-                cropImg = img[y1:y1 + height, x1:x1 + width]
-                cv2.imwrite(f'./datasets/snake_imgs/test{index}.png', cropImg)
+                snake_img = croped_image[y1:y1 + height, x1:x1 + width]
+                cv2.imwrite(f'./datasets/snake_imgs/{page}页第{index}张图.jpeg', snake_img)
 
 if __name__ == '__main__':
     start = time.time()
-    pdf_2_image()
+    c = CV2Process(path='./datasets/test_pdf_imgs/*.png')
+    c.save_contours()
     total_time = time.time() - start
     with open('total_time.txt', 'w') as f:
         f.write(str(total_time))
