@@ -31,10 +31,13 @@ class CV2Process:
             page = int(re.findall(r'第(\d+)页', im_path)[0])
             if page % 2:
                 # 有右上侧栏:
-                croped_img = img[155: -1, 8:-145]
+                # 上、下、左、右
+                croped_img = img[155: -1, 8:-145] # 下册
+                # 上册: croped_img = img[155: -1, 8:-250]
             else:
                 # 有左侧栏
-                croped_img = img[1:-1, 330:-6]
+                croped_img = img[1:-1, 330:-6] # 下册
+                # 上册: croped_img = img[260:-230, 220:-6]
             self.croped_images[page] = croped_img
 
     def find_contours(self, croped_image, page):
