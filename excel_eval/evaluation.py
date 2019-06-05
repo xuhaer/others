@@ -23,7 +23,6 @@ def col_type_cnt(df, result):
     """
     统计原始数据各列数据类型的汇总情况
     """
-    res, z = defaultdict(list), {}
     for col in df:
         cnt_dict = dict(Counter(df[col].map(col_type)))
         result[col].update({x: cnt_dict.setdefault(x, np.nan) for x in ['numeric', 'str', 'nan']})
