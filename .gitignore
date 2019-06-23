@@ -113,3 +113,4 @@ excel_eval/*.txt
 *.csv
 *.png
 *.jpeg
+*.pdf
