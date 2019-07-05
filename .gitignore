@@ -104,7 +104,7 @@ venv.bak/
 .mypy_cache/
 
 # my custom
-tesseract/datasets/*
+snake_of_china/datasets/*
 data_import/*.txt
 excel_eval/*.txt
 
