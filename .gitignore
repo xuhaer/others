@@ -108,7 +108,9 @@ snake_of_china/datasets/*
 data_import/*.txt
 excel_eval/*.txt
 
-*.json
+data_import/*.json
+excel_eval/*.json
+*.vscode
 *.xlsx
 *.csv
 *.png
