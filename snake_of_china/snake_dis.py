@@ -1,6 +1,7 @@
 from pyecharts.render import make_snapshot
 from pyecharts.charts import Map
-from pyecharts.commons.utils import JsCodefrom pyecharts import options as opts
+from pyecharts.commons.utils import JsCode
+from pyecharts import options as opts
 from pyecharts import options as opts
 from snapshot_selenium import snapshot
 
