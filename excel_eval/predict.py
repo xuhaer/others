@@ -98,12 +98,7 @@ def cell_type(x):
             return 'numeric'
 
 
-def main(column, col, confirmed_st, unit=None):
-    col_info = {}
-    if column in confirmed_st:
-        col_info['相似度'] = confirmed_st[column]
-        col_info['确认情况'] = '已确认'
-        return col_info
+def before_predict(column, col, col_info, unit):
     cnt = Counter(col.map(cell_type))
     col_info['值的类型'] = dict(cnt)
     most_common_type, *v = cnt.most_common(1)[0]
@@ -120,10 +115,37 @@ def main(column, col, confirmed_st, unit=None):
         most_common_data = dict(Counter(col).most_common(3)).keys()
         similarity = predict(origin_name=column, unit=unit, most_common_type=most_common_type, most_common_data=most_common_data)
         col_info['最常见值'] = [f'{data[:4]}...' if len(str(data)) > 6 else str(data) for data in most_common_data]
+    return similarity
+
+
+def main(column, col, confirmed_st=None, unit=None):
+    col_info = {}
+    if confirmed_st and column in confirmed_st:
+        col_info['匹配列'] = confirmed_st[column]
+        col_info['确认情况'] = '已确认'
+    similarity = before_predict(column, col, col_info, unit)
     similarity = sorted(similarity, key=itemgetter(0), reverse=True)[:3]
-    col_info['相似度'] = {similarity[i][1]['nameChs']: round(similarity[i][0], 2) for i in range(len(similarity))}
-    col_info['确认情况'] = '无'
+    col_info['可能列'] = [sim[1]['nameChs'] for sim in similarity[1:]]
+    col_info['标准单位'] = similarity[0][1]['unit'] if similarity else None
+    col_info['参考范围'] = REFRANGE.get(similarity[0][1]['name']) if similarity else None
+    if col_info.get('70%的值分布于') and col_info.get('参考范围'):
+        v_70_min, v_70_max = col_info['70%的值分布于']
+        refRange_min, refRange_max = col_info['参考范围']
+        is_value_ideal = v_70_min >= refRange_min and v_70_max <= refRange_max
+        col_info['70%分布值是否正常'] = True if is_value_ideal else False
+    col_info.setdefault('匹配列', similarity[0][1]['nameChs'] if similarity else None)
+    col_info.setdefault('确认情况', '无')
     return col_info
+
+
+def highlight_mixedtype_data(data):
+    """对str、nan、与numeric 的混合类型列染色"""
+    return 'color: red' if len(data) >= 3 else 'color: green'
+
+
+def highlight_unnormal_col(data):
+    """对70%分布值是否正常列染色"""
+    return 'color: red' if not data else 'color: green'
 
 
 if __name__ == '__main__':
@@ -133,5 +155,9 @@ if __name__ == '__main__':
     for column in df:
         col = df[column]
         res[column] = main(column, col, {'血脂四项:甘油三脂(TG)': '甘油三酯'})
-    df = pd.DataFrame(res)
-    df.T.to_excel('列信息.xlsx')
+    index = ['值的类型', '70%的值分布于', '最小值', '最大值', '最常见值', '匹配列',
+             '标准单位', '参考范围', '70%分布值是否正常', '确认情况', '可能列']
+    df = pd.DataFrame(res, index=index).T
+    style_df = df.style.applymap(highlight_unnormal_col, subset=['70%分布值是否正常']).\
+            applymap(highlight_mixedtype_data, subset=['值的类型'])
+    style_df.to_excel('列信息2.xlsx', engine='openpyxl')
