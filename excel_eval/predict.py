@@ -140,7 +140,7 @@ def main(column, col, confirmed_st=None, unit=None):
 
 def highlight_mixedtype_data(data):
     """对str、nan、与numeric 的混合类型列染色"""
-    return 'color: red' if len(data) >= 3 else 'color: green'
+    return 'color: red' if len(data) >= 3 else ''
 
 
 def highlight_unnormal_col(data):
@@ -151,13 +151,22 @@ def highlight_unnormal_col(data):
 if __name__ == '__main__':
     res = {}
     datas = '/Users/har/Desktop/无锡电信.xlsx'
+    with open('./excel_eval/confirmed_st.json') as f:
+        confirmed_st = json.load(f)
     df = pd.read_excel(datas).head(10)
     for column in df:
         col = df[column]
-        res[column] = main(column, col, {'血脂四项:甘油三脂(TG)': '甘油三酯'})
+        res[column] = main(column, col, confirmed_st)
     index = ['值的类型', '70%的值分布于', '最小值', '最大值', '最常见值', '匹配列',
              '标准单位', '参考范围', '70%分布值是否正常', '确认情况', '可能列']
     df = pd.DataFrame(res, index=index).T
     style_df = df.style.applymap(highlight_unnormal_col, subset=['70%分布值是否正常']).\
             applymap(highlight_mixedtype_data, subset=['值的类型'])
     style_df.to_excel('列信息2.xlsx', engine='openpyxl')
+
+    # confirmed_excel = pd.read_excel('confirmed.xlsx', index_col=0)
+    # relations = dict(zip(confirmed_excel.index, confirmed_excel['确认情况']))
+    # map_relation = {k: v for k, v in relations.items() if v == '无'}
+    # if map_relation:
+    #     with open('./excel_eval/temp_confirmed_st.json', 'w') as f:
+    #         json.dump(map_relation, f, ensure_ascii=False, indent=4)
