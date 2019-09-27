@@ -109,7 +109,6 @@ data_import/*.txt
 excel_eval/*.txt
 
 data_import/*.json
-excel_eval/*.json
 *.vscode
 *.xlsx
 *.csv
