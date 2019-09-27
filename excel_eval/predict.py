@@ -136,8 +136,6 @@ def main(column_name, col, confirmed_st=None, unit=None):
     col_info['可能列'] = [sim[1]['nameChs'] for sim in similarity[1:]]
     col_info.setdefault('标准单位', similarity[0][1]['unit'] if similarity else None)
     col_info.setdefault('参考范围', REFRANGE.get(similarity[0][1]['name']) if similarity else None)
-    if column_name == '肾功能全套:尿酸(UA)':
-        print(1)
     if col_info.get('70%的值分布于') and col_info.get('参考范围'):
         v_70_min, v_70_max = col_info['70%的值分布于']
         refRange_min, refRange_max = col_info['参考范围']
