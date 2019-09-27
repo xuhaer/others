@@ -20,14 +20,17 @@ with open('./excel_eval/refRange.json') as f:
 def name_similarity(origin_name):
     similar_list = []
     for st in SAMPLETYPE:
-        st_name_str = f"{st['nameChs']} {st['name']} {st['nameChsAlts']}"
-        st_name_words = set(jieba.cut(st_name_str)) - {'-', ' ', '_', ')', '('}
-        origin_name_words = set(jieba.cut(origin_name)) - {'-', ' ', '_', ')', '('}
-        sim = round(len(st_name_words & origin_name_words) / max(len(st_name_words), len(origin_name_words)), 2)
-        origin_name_words_eng = set(re.findall(r'[a-zA-Z1-9]{2,}', origin_name))
-        st_name_words_eng = set(jieba.cut(st['name'])) - {'-', ' ', '_', ')', '('}
-        eng_name_sim = round(len(st_name_words_eng & origin_name_words_eng) / max(len(st_name_words_eng), len(origin_name_words_eng)), 2)
-        sim += eng_name_sim
+        if origin_name in [st['nameChs'], st['name'], st['nameChsAlts']]:
+            sim = 1
+        else:
+            st_name_str = f"{st['nameChs']} {st['name']} {st['nameChsAlts']}"
+            st_name_words = set(jieba.cut(st_name_str)) - {'-', ' ', '_', ')', '('}
+            origin_name_words = set(jieba.cut(origin_name)) - {'-', ' ', '_', ')', '('}
+            sim = round(len(st_name_words & origin_name_words) / max(len(st_name_words), len(origin_name_words)), 2)
+            origin_name_words_eng = set(re.findall(r'[a-zA-Z1-9]{2,}', origin_name))
+            st_name_words_eng = set(jieba.cut(st['name'])) - {'-', ' ', '_', ')', '('}
+            eng_name_sim = round(len(st_name_words_eng & origin_name_words_eng) / max(len(st_name_words_eng), len(origin_name_words_eng)), 2)
+            sim += eng_name_sim
         if sim > 0:
             similar_list.append([sim, st])
     return similar_list
