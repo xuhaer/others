@@ -1,7 +1,8 @@
 import re
 import json
+import time
 
-from collections import Counter
+from collections import Counter, defaultdict
 from operator import itemgetter
 
 import jieba
@@ -77,14 +78,14 @@ def predict(origin_name, most_common_type=None,
             unit=None, percent_70=None):
     assert isinstance(origin_name, str)
     similarity = name_similarity(origin_name)
-    if most_common_type:
-        similarity = dataType_similarity(similarity, most_common_type)
-    if most_common_data:
-        similarity = most_common_data_similarity(similarity, most_common_data)
-    if unit:
-        similarity = unit_similarity(similarity, unit)
-    if percent_70:
-        similarity = data_value_similarity(similarity, percent_70)
+    # if most_common_type:
+    #     similarity = dataType_similarity(similarity, most_common_type)
+    # if most_common_data:
+    #     similarity = most_common_data_similarity(similarity, most_common_data)
+    # if unit:
+    #     similarity = unit_similarity(similarity, unit)
+    # if percent_70:
+    #     similarity = data_value_similarity(similarity, percent_70)
     return similarity
 
 
@@ -127,7 +128,7 @@ def main(column_name, col, confirmed_st=None, unit=None):
         col_info['匹配列'] = confirmed_st[column_name]
         col_info['确认情况'] = '已确认'
         st = [st for st in SAMPLETYPE if st['nameChs'] == col_info['匹配列']]
-        assert len(st) == 1
+        # assert len(st) == 1
         col_info['标准单位'] = st[0]['unit']
         col_info['参考范围'] = REFRANGE.get(st[0]['name'])
 
@@ -166,19 +167,70 @@ def make_confirmed_json(confirmed_st):
             json.dump(confirmed_st, f, ensure_ascii=False, indent=4)
 
 
-if __name__ == '__main__':
-    res = {}
-    datas = '/Users/har/Desktop/无锡电信.xlsx'
-    with open('./excel_eval/confirmed_st.json') as f:
-        confirmed_st = json.load(f)
-    df = pd.read_excel(datas).head(10)
-    for column_name in df:
-        col = df[column_name]
-        res[column_name] = main(column_name, col, confirmed_st)
-    index = ['值的类型', '70%的值分布于', '最小值', '最大值', '最常见值', '匹配列',
-             '标准单位', '参考范围', '70%分布值是否正常', '确认情况', '可能列']
-    df = pd.DataFrame(res, index=index).T
-    style_df = df.style.applymap(highlight_unnormal_col, subset=['70%分布值是否正常']).\
-            applymap(highlight_mixedtype_data, subset=['值的类型'])
-    style_df.to_excel('eval.xlsx', engine='openpyxl')
-    # make_confirmed_json(confirmed_st)
+def data_similarity(name_similarity, counter, col_info):
+    '''传入值的Counter 返回相似度'''
+    sample_type = defaultdict(int)
+    numeric_cnter = {}
+    for v, cnt in counter.items():
+        try:
+            numeric_v = float(v)
+        except ValueError:
+            sample_type['str'] += cnt
+        else:
+            if v:
+                numeric_cnter[numeric_v] = cnt
+                sample_type['numeric'] += cnt
+            else: # 可能为"" 空字符？？
+                sample_type['nan'] += cnt
+    # 值的类型判断
+    col_info['value_type'] = dict(sample_type)
+    v_most_common_type = max(zip(sample_type.values(), sample_type.keys()))[1]
+    similarity = dataType_similarity(name_similarity, v_most_common_type)
+
+    # 值的判断
+    numeric_counter = Counter(numeric_cnter)
+    if v_most_common_type == 'numeric':
+        col_info['最大值'] = max(numeric_cnter)
+        col_info['最小值'] = min(numeric_cnter)
+        for index, (sim, st) in enumerate(similarity):
+            allow_min, allow_max = REFRANGE.get(st['name'], [-999, 999])
+            for v in sorted(numeric_counter.keys(), reverse=True):
+                if allow_min < v < allow_max:
+                    factor = 0.5 if allow_max != 999 else 0.2
+                    valid_percent = (numeric_counter[v] / sum(counter.values()))
+                    similarity[index][0] += factor * valid_percent
+    sim = sorted(similarity, key=itemgetter(0), reverse=True)[:3]
+    if v_most_common_type == 'numeric' and sim:
+        col_info['合法值比例'] = 0
+        allow_min, allow_max = REFRANGE.get(sim[0][1]['name'], [-999, 999])
+        for v in sorted(numeric_counter.keys(), reverse=True):
+            if allow_min < v < allow_max:
+                valid_percent = (numeric_counter[v] / sum(counter.values()))
+                col_info['合法值比例'] += valid_percent
+    return sim
+
+def make_predict(all_data, sep='@_@'):
+    res = []
+    i = 0
+    for k, v in all_data.items():
+        col_info = {}
+        group_name, item_name = k.split(sep)
+        name_sim = name_similarity(item_name)
+        similarity = data_similarity(name_sim, Counter(v), col_info)
+        col_info['group_name'] = group_name
+        col_info['item_name'] = item_name
+        col_info['可能列'] = [sim[1]['nameChs'] for sim in similarity[0:]]
+        col_info.setdefault('标准单位', similarity[0][1]['unit'] if similarity else None)
+        col_info.setdefault('参考范围', REFRANGE.get(similarity[0][1]['name']) if similarity else None)
+        # {'group_name': '一般情况', 'item_name': '身高', '参考范围': None, '可能列': ['身高'], '标准单位': 'cm'}
+        i += 1
+        res.append(col_info)
+        time.sleep(0.4)
+        # if i > 20:
+        #     break
+    with open('res.json', 'w') as f:
+        json.dump(res, f, ensure_ascii=False, indent=2)
+
+with open('all_data1.json') as f:
+    all_data = json.load(f)
+    make_predict(all_data)
