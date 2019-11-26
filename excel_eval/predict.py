@@ -34,7 +34,7 @@ def name_similarity(origin_name):
             sim += eng_name_sim
         if sim > 0:
             similar_list.append([sim, st])
-    return similar_list
+    return sorted(similar_list, key=itemgetter(0), reverse=True)[:5]
 
 
 def dataType_similarity(similarity, most_common_type):
@@ -169,12 +169,15 @@ def make_confirmed_json(confirmed_st):
 
 def data_similarity(name_similarity, counter, col_info):
     '''传入值的Counter 返回相似度'''
+    likely_name = []
     sample_type = defaultdict(int)
     numeric_cnter = {}
+    str_cnter = {}
     for v, cnt in counter.items():
         try:
             numeric_v = float(v)
         except ValueError:
+            str_cnter[v] = cnt
             sample_type['str'] += cnt
         else:
             if v:
@@ -188,25 +191,39 @@ def data_similarity(name_similarity, counter, col_info):
     similarity = dataType_similarity(name_similarity, v_most_common_type)
 
     # 值的判断
-    numeric_counter = Counter(numeric_cnter)
+    numeric_counter = Counter(numeric_cnter) # filter
+    total_values = sum(counter.values())
     if v_most_common_type == 'numeric':
-        col_info['最大值'] = max(numeric_cnter)
-        col_info['最小值'] = min(numeric_cnter)
+        col_info['max'] = max(numeric_cnter)
+        col_info['min'] = min(numeric_cnter)
+        col_info['invalid_values'] = str_cnter
         for index, (sim, st) in enumerate(similarity):
+            legal_percent = 0
             allow_min, allow_max = REFRANGE.get(st['name'], [-999, 999])
             for v in sorted(numeric_counter.keys(), reverse=True):
-                if allow_min < v < allow_max:
+                if allow_min <= v <= allow_max:
                     factor = 0.5 if allow_max != 999 else 0.2
-                    valid_percent = (numeric_counter[v] / sum(counter.values()))
+                    valid_percent = (numeric_counter[v] / total_values)
+                    valid_percent = round(numeric_counter[v] / total_values, 3)
+                    legal_percent += valid_percent
                     similarity[index][0] += factor * valid_percent
+            if round(legal_percent, 2):
+                likely_name.append({
+                    'name': st['name'],
+                    'nameChs': st['nameChs'],
+                    'dataType': st['dataType'],
+                    'RefRange': st['defaultRefRange'],
+                    'unit': st['unit'],
+                    'valid_percent': round(legal_percent, 2),
+                })
     sim = sorted(similarity, key=itemgetter(0), reverse=True)[:3]
-    if v_most_common_type == 'numeric' and sim:
-        col_info['合法值比例'] = 0
-        allow_min, allow_max = REFRANGE.get(sim[0][1]['name'], [-999, 999])
-        for v in sorted(numeric_counter.keys(), reverse=True):
-            if allow_min < v < allow_max:
-                valid_percent = (numeric_counter[v] / sum(counter.values()))
-                col_info['合法值比例'] += valid_percent
+    if sim:
+        col_info['std_name'] = {'name': sim[0][1]['name'], 'nameChs': sim[0][1]['nameChs'],}
+        col_info['likely_name'] = likely_name
+    else:
+        # print(col_info)
+        col_info['std_name'] = None
+        col_info['likely_name'] = likely_name
     return sim
 
 def make_predict(all_data, sep='@_@'):
@@ -215,20 +232,22 @@ def make_predict(all_data, sep='@_@'):
     for k, v in all_data.items():
         col_info = {}
         group_name, item_name = k.split(sep)
-        name_sim = name_similarity(item_name)
-        similarity = data_similarity(name_sim, Counter(v), col_info)
+        if item_name == '血小板计数':
+            print(1)
         col_info['group_name'] = group_name
         col_info['item_name'] = item_name
-        col_info['可能列'] = [sim[1]['nameChs'] for sim in similarity[0:]]
-        col_info.setdefault('标准单位', similarity[0][1]['unit'] if similarity else None)
-        col_info.setdefault('参考范围', REFRANGE.get(similarity[0][1]['name']) if similarity else None)
+        name_sim = name_similarity(item_name)
+        similarity = data_similarity(name_sim, Counter(v), col_info)
+        # col_info['likely_name'] = [sim[1]['nameChs'] for sim in similarity[0:]]
+        # col_info.setdefault('unit', similarity[0][1]['unit'] if similarity else None)
+        # col_info.setdefault('refrange', REFRANGE.get(similarity[0][1]['name']) if similarity else None)
         # {'group_name': '一般情况', 'item_name': '身高', '参考范围': None, '可能列': ['身高'], '标准单位': 'cm'}
         i += 1
         res.append(col_info)
-        time.sleep(0.4)
-        # if i > 20:
-        #     break
-    with open('res.json', 'w') as f:
+        time.sleep(0.1)
+        if i > 50:
+            break
+    with open('res22.json', 'w') as f:
         json.dump(res, f, ensure_ascii=False, indent=2)
 
 with open('all_data1.json') as f:
