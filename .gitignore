@@ -115,3 +115,5 @@ data_import/*.json
 *.png
 *.jpeg
 *.pdf
+*.json
+*.xlsx

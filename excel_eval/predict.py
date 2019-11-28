@@ -48,13 +48,8 @@ def dataType_similarity(similarity, most_common_type):
         pass
     return similarity
 
-
-def data_similarity(name_similarity, counter, col_info):
-    '''传入值的Counter 返回相似度'''
-    likely_name = []
-    sample_type = defaultdict(int)
-    numeric_cnter = {}
-    str_cnter = {}
+def counter_divide(counter):
+    numeric_cnter, str_cnter, sample_type = {}, {}, defaultdict(int)
     for v, cnt in counter.items():
         try:
             numeric_v = float(v)
@@ -67,6 +62,13 @@ def data_similarity(name_similarity, counter, col_info):
                 sample_type['numeric'] += cnt
             else: # 可能为"" 空字符？？
                 sample_type['nan'] += cnt
+    return numeric_cnter, str_cnter, sample_type
+
+
+def data_similarity(name_similarity, counter, col_info):
+    '''传入值的Counter 返回相似度'''
+    likely_name = []
+    numeric_cnter, str_cnter, sample_type = counter_divide(counter)
     # 值的类型判断
     col_info['value_type'] = dict(sample_type)
     v_most_common_type = max(zip(sample_type.values(), sample_type.keys()))[1]
@@ -101,17 +103,15 @@ def data_similarity(name_similarity, counter, col_info):
                     'unit': st['unit'],
                     'valid_percent': round(legal_percent, 2),
                 })
-        # col_info['function'] = "re.sub('\\D', '', value)"
-        col_info['function'] = "float(value)"
+        col_info['function'] = "to_float"
     else:
-        col_info['function'] = "str(value)"
+        col_info['function'] = "to_str"
 
     sim = sorted(similarity, key=itemgetter(0), reverse=True)[:3]
     if sim:
         col_info['std_name'] = {'name': sim[0][1]['name'], 'nameChs': sim[0][1]['nameChs'],}
         col_info['likely_name'] = likely_name
     else:
-        # print(col_info)
         col_info['std_name'] = {'name': None, 'nameChs': None}
         col_info['likely_name'] = likely_name
     return sim
@@ -124,18 +124,13 @@ def make_predict(all_data, sep='@_@'):
         group_name, item_name = k.split(sep)
         col_info['group_name'] = group_name
         col_info['item_name'] = item_name
-        if item_name == '尿红细胞计数':
-            print(dict(Counter(v)))
-            print(1)
-        else:
-            continue
         name_sim = name_similarity(item_name)
         data_similarity(name_sim, Counter(v), col_info)
         i += 1
         res.append(col_info)
         time.sleep(0.1)
-        # if i > 10:
-        #     break
+        if i > 10:
+            break
     with open('res确认后1.json', 'w') as f:
         json.dump(res, f, ensure_ascii=False, indent=2)
 
