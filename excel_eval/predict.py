@@ -85,10 +85,10 @@ def data_similarity(name_similarity, counter, col_info):
         col_info['invalid_values'] = str_cnter
         for index, (sim, st) in enumerate(similarity):
             legal_percent = 0
-            allow_min, allow_max = REFRANGE.get(st['name'], [None, None])
+            allow_min, allow_max = REFRANGE.get(st['name'], [-999, 999])
             for v in sorted(numeric_counter.keys(), reverse=True):
                 valid_percent = 0
-                if (allow_min and allow_max) and allow_min <= v <= allow_max:
+                if REFRANGE.get(st['name']) and (allow_min <= v <= allow_max):
                     factor = 0.5
                     valid_percent = numeric_counter[v] / total_values
                     legal_percent += valid_percent
@@ -130,7 +130,7 @@ def make_predict(all_data, sep='@_@'):
         time.sleep(0.1)
         if i > 10:
             break
-    with open('res确认后1.json', 'w') as f:
+    with open('res确认后.json', 'w') as f:
         json.dump(res, f, ensure_ascii=False, indent=2)
 
 
