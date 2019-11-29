@@ -85,35 +85,34 @@ def data_similarity(name_similarity, counter, col_info):
         col_info['invalid_values'] = str_cnter
         for index, (sim, st) in enumerate(similarity):
             legal_percent = 0
-            allow_min, allow_max = REFRANGE.get(st['name'], [-999, 999])
+            allow_min, allow_max = REFRANGE.get(st['name'], [None, None])
             for v in sorted(numeric_counter.keys(), reverse=True):
                 valid_percent = 0
-                if allow_min <= v <= allow_max:
-                    factor = 0.5 if allow_max != 999 else 0.05
-                    valid_percent = (numeric_counter[v] / total_values)
-                    valid_percent = round(numeric_counter[v] / total_values, 3)
+                if (allow_min and allow_max) and allow_min <= v <= allow_max:
+                    factor = 0.5
+                    valid_percent = numeric_counter[v] / total_values
                     legal_percent += valid_percent
                     similarity[index][0] += factor * valid_percent
-            if round(legal_percent, 2):
-                likely_name.append({
-                    'name': st['name'],
-                    'nameChs': st['nameChs'],
-                    'dataType': st['dataType'],
-                    'RefRange': st['defaultRefRange'],
-                    'unit': st['unit'],
-                    'valid_percent': round(legal_percent, 2),
-                })
+            likely_name.append({
+                'name': st['name'],
+                'nameChs': st['nameChs'],
+                'dataType': st['dataType'],
+                'RefRange': st['defaultRefRange'],
+                'unit': st['unit'],
+                'valid_percent': round(legal_percent, 2),
+                'similarity': similarity[index][0]
+            })
         col_info['function'] = "to_float"
     else:
         col_info['function'] = "to_str"
 
     sim = sorted(similarity, key=itemgetter(0), reverse=True)[:3]
+    col_info['std_name'] = {'name': None, 'nameChs': None}
+    col_info['likely_name'] = likely_name
     if sim:
-        col_info['std_name'] = {'name': sim[0][1]['name'], 'nameChs': sim[0][1]['nameChs'],}
-        col_info['likely_name'] = likely_name
-    else:
-        col_info['std_name'] = {'name': None, 'nameChs': None}
-        col_info['likely_name'] = likely_name
+        if sim[0][0] > 0.7:
+            col_info['std_name'] = {'name': sim[0][1]['name'], 'nameChs': sim[0][1]['nameChs']}
+            col_info['likely_name'] = likely_name
     return sim
 
 def make_predict(all_data, sep='@_@'):
