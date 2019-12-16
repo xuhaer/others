@@ -48,5 +48,5 @@ def samples_value_counter():
             res[item_name][value] += 1
     return res
 
-with open('清江.json', 'w') as f:
+with open('oringin_data_counter.json', 'w') as f:
     json.dump(samples_value_counter(), f, ensure_ascii=False, indent=2)

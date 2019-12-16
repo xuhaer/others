@@ -7,7 +7,7 @@ import pandas as pd
 from custom_functions import to_str, to_float, find_numeric
 
 
-with open('st_map_after_comfirmed.json') as f:
+with open('预测结果_人工确认后.json') as f:
     MAPS = json.load(f)
 
 
@@ -61,11 +61,11 @@ def main():
         std_samples = to_std_samples(row['samples'])
         # todo 将标准 std_samples 写入mongo_db
         row.update(std_samples)
-        for k in ['summary', 'summarize', 'advise', 'suggest', 'pe_result', 'samples']:
-            try:
-                del row[k]
-            except KeyError:
-                pass
+        # for k in ['summary', 'summarize', 'advise', 'suggest', 'pe_result', 'samples']:
+        #     try:
+        #         del row[k]
+        #     except KeyError:
+        #         pass
         excel_data.append(row)
     return excel_data
 

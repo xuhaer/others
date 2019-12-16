@@ -110,7 +110,7 @@ def data_similarity(name_similarity, counter, col_info):
     col_info['std_name'] = {'name': None, 'nameChs': None}
     col_info['likely_name'] = likely_name
     if sim:
-        if sim[0][0] > 0.7:
+        if sim[0][0] > 0.5:
             col_info['std_name'] = {'name': sim[0][1]['name'], 'nameChs': sim[0][1]['nameChs']}
             col_info['likely_name'] = likely_name
     return sim
@@ -120,20 +120,18 @@ def make_predict(all_data, sep='@_@'):
     i = 0
     for k, v in all_data.items():
         col_info = {}
-        group_name, item_name = k.split(sep)
-        col_info['group_name'] = group_name
-        col_info['item_name'] = item_name
-        name_sim = name_similarity(item_name)
+        # group_name, item_name = k.split(sep)
+        # col_info['group_name'] = group_name
+        col_info['item_name'] = k
+        name_sim = name_similarity(k)
         data_similarity(name_sim, Counter(v), col_info)
         i += 1
         res.append(col_info)
         time.sleep(0.1)
-        if i > 10:
-            break
-    with open('res确认后.json', 'w') as f:
+    with open('预测结果.json', 'w') as f:
         json.dump(res, f, ensure_ascii=False, indent=2)
 
 
-with open('all_data1.json') as f:
+with open('oringin_data_counter.json') as f:
     all_data = json.load(f)
     make_predict(all_data)
