@@ -62,6 +62,7 @@ def main(fn):
     return res
 
 
+
 def get_cover_info(cover_data):
     assert cover_data[0]['data'][0].startswith('*') and cover_data[0]['data'][0].endswith('*')
     assert cover_data[2]['data'][0] == '连云港市第一人民医院体检中心'
@@ -159,6 +160,8 @@ def parsing_common_samples(group_samples, group_name):
                     res.append({'group_name': group_name, 'item_name': line[0], 'value': line[1], 'refrange': refrange})
                 else:
                     res.append({'group_name': group_name, 'item_name': line[0], 'value': line[1]})
+            elif ['项目名称', '检查结果'] in group_samples: # 虽表头有两项，但有参考列
+                res.append({'group_name': group_name, 'item_name': line[0], 'value': line[1]})
             else:
                 raise ValueError(f'体检数据未知的长度格式:{line}') from None
         else:
@@ -229,12 +232,13 @@ def get_data(lines):
 if __name__ == '__main__':
     a = time.time()
     res = []
-    paths = glob.glob('/Users/har/Desktop/连云港第一人民医院534/*.pdf')
+    paths = glob.glob('/Users/har/Desktop/1/*.pdf')
     for path in paths:
         lines = main(path)
+        # path = '/Users/har/Desktop/连云港第一人民医院534/o2UrD0trs4XHxttg34UpfzRYKHq8.pdf'
+        print(path)
         if not lines:
             # pdf 不含文字内容，全为图片
-            print(path)
             res.append({'file_name': path})
             continue
         cover_data = [line for line in lines if line['page_no'] == 1]
@@ -245,7 +249,6 @@ if __name__ == '__main__':
         data = {'file_name': path, 'basic_info': basic_info}
         data.update(get_data(lines))
         res.append(data)
-        print('ok', end=' ')
-    with open('/Users/har/Desktop/data2.json', 'w') as f:
+    with open('/Users/har/Desktop/pdf1.json', 'w') as f:
         json.dump(res, f, ensure_ascii=False, indent=2)
     print(time.time() - a)
