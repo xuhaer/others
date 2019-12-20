@@ -8,7 +8,7 @@ import pymongo
 def connect_db():
     mongo_client = pymongo.MongoClient(os.environ.get('Mongo_DB'))
     mongo_db = mongo_client["test"]
-    collection = mongo_db['yz_appointment']
+    collection = mongo_db['boc_appointment']
     return collection
 
 collection = connect_db()
@@ -36,16 +36,18 @@ def samples_value_counter():
         }
     '''
     res = {}
-    for c in collection.find({"file_name": '清江.xlsx'}):
+    for c in collection.find({"hospital": '连云港第一人民医院'}):
         samples = c.get('samples')
         if not samples:
             continue
         for sample in samples:
             data = defaultdict(int)
-            item_name = sample['item_name']
-            value = sample['value']
-            res.setdefault(item_name, data)
-            res[item_name][value] += 1
+            group_name = sample['group_item_name']
+            item_name = sample['detail_item_name']
+            if item_name != '小结':
+                value = sample['exam_result']
+                res.setdefault(f'{group_name}@_@{item_name}', data)
+                res[f'{group_name}@_@{item_name}'][value] += 1
     return res
 
 with open('oringin_data_counter.json', 'w') as f:

@@ -17,6 +17,7 @@ with open('./excel_eval/refRange.json') as f:
 
 
 def name_similarity(origin_name):
+    '''给予名称相似度权重40%'''
     similar_list = []
     for st in SAMPLETYPE:
         if origin_name in [st['nameChs'], st['name'], st['nameChsAlts']]:
@@ -31,11 +32,12 @@ def name_similarity(origin_name):
             eng_name_sim = round(len(st_name_words_eng & origin_name_words_eng) / max(len(st_name_words_eng), len(origin_name_words_eng)), 2)
             sim += eng_name_sim
         if sim > 0:
-            similar_list.append([sim, st])
+            similar_list.append([sim / 2.5, st])
     return sorted(similar_list, key=itemgetter(0), reverse=True)[:5]
 
 
 def dataType_similarity(similarity, most_common_type):
+    '''给予名称相似度权重20%'''
     if most_common_type == 'numeric':
         for index, (sim, st) in enumerate(similarity):
             if st['dataType'] in ['[float]', 'float', 'int']:
@@ -66,7 +68,8 @@ def counter_divide(counter):
 
 
 def data_similarity(name_similarity, counter, col_info):
-    '''传入值的Counter 返回相似度'''
+    '''传入值的Counter 返回相似度，给予值的范围相似度权重40%'''
+
     likely_name = []
     numeric_cnter, str_cnter, sample_type = counter_divide(counter)
     # 值的类型判断
@@ -86,13 +89,15 @@ def data_similarity(name_similarity, counter, col_info):
         for index, (sim, st) in enumerate(similarity):
             legal_percent = 0
             allow_min, allow_max = REFRANGE.get(st['name'], [-999, 999])
-            for v in sorted(numeric_counter.keys(), reverse=True):
-                valid_percent = 0
-                if REFRANGE.get(st['name']) and (allow_min <= v <= allow_max):
-                    factor = 0.5
-                    valid_percent = numeric_counter[v] / total_values
-                    legal_percent += valid_percent
-                    similarity[index][0] += factor * valid_percent
+            if REFRANGE.get(st['name']):
+                for v in sorted(numeric_counter.keys(), reverse=True):
+                    if allow_min <= v <= allow_max:
+                        factor = 0.5
+                        valid_percent = numeric_counter[v] / total_values
+                        legal_percent += valid_percent
+                        similarity[index][0] += factor * valid_percent
+            else:
+                similarity[index][0] += 0.25
             likely_name.append({
                 'name': st['name'],
                 'nameChs': st['nameChs'],
@@ -100,7 +105,7 @@ def data_similarity(name_similarity, counter, col_info):
                 'RefRange': st['defaultRefRange'],
                 'unit': st['unit'],
                 'valid_percent': round(legal_percent, 2),
-                'similarity': similarity[index][0]
+                'similarity': round(similarity[index][0], 2)
             })
         col_info['function'] = "to_float"
     else:
@@ -112,7 +117,6 @@ def data_similarity(name_similarity, counter, col_info):
     if sim:
         if sim[0][0] > 0.5:
             col_info['std_name'] = {'name': sim[0][1]['name'], 'nameChs': sim[0][1]['nameChs']}
-            col_info['likely_name'] = likely_name
     return sim
 
 def make_predict(all_data, sep='@_@'):
@@ -120,10 +124,10 @@ def make_predict(all_data, sep='@_@'):
     i = 0
     for k, v in all_data.items():
         col_info = {}
-        # group_name, item_name = k.split(sep)
-        # col_info['group_name'] = group_name
-        col_info['item_name'] = k
-        name_sim = name_similarity(k)
+        group_name, item_name = k.split(sep)
+        col_info['group_name'] = group_name
+        col_info['item_name'] = item_name
+        name_sim = name_similarity(item_name)
         data_similarity(name_sim, Counter(v), col_info)
         i += 1
         res.append(col_info)
