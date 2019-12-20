@@ -17,35 +17,42 @@ with open('./excel_eval/refRange.json') as f:
 
 
 def name_similarity(origin_name):
-    '''给予名称相似度权重40%'''
+    '''
+        给予名称相似度权重50%
+        todo: 需要考虑词汇权重，比如：高密度脂蛋白、非高密度脂蛋白 仅一字之差，此函数对此无法很好的处理。
+    '''
     similar_list = []
     for st in SAMPLETYPE:
-        if origin_name in [st['nameChs'], st['name'], st['nameChsAlts']]:
-            sim = 1
+        if origin_name in [st['nameChs'], st['name']]:
+            sim = 0.5
+        elif origin_name in [st['nameChsAlts']]:
+            sim = 0.3
         else:
             st_name_str = f"{st['nameChs']} {st['name']} {st['nameChsAlts']}"
             st_name_words = set(jieba.cut(st_name_str)) - {'-', ' ', '_', ')', '('}
             origin_name_words = set(jieba.cut(origin_name)) - {'-', ' ', '_', ')', '('}
-            sim = round(len(st_name_words & origin_name_words) / max(len(st_name_words), len(origin_name_words)), 2)
+            sim = round(len(st_name_words & origin_name_words) / max(len(st_name_words), len(origin_name_words)) / 2, 2)
             origin_name_words_eng = set(re.findall(r'[a-zA-Z1-9]{2,}', origin_name))
             st_name_words_eng = set(jieba.cut(st['name'])) - {'-', ' ', '_', ')', '('}
-            eng_name_sim = round(len(st_name_words_eng & origin_name_words_eng) / max(len(st_name_words_eng), len(origin_name_words_eng)), 2)
+            eng_name_sim = round(len(st_name_words_eng & origin_name_words_eng) / max(len(st_name_words_eng), len(origin_name_words_eng)) / 2, 2)
             sim += eng_name_sim
         if sim > 0:
-            similar_list.append([sim / 2.5, st])
+            if sim > 0.5:
+                sim = 0.5
+            similar_list.append([sim, st])
     return sorted(similar_list, key=itemgetter(0), reverse=True)[:5]
 
 
 def dataType_similarity(similarity, most_common_type):
-    '''给予名称相似度权重20%'''
+    '''给予数值类型相似度权重10%'''
     if most_common_type == 'numeric':
         for index, (sim, st) in enumerate(similarity):
             if st['dataType'] in ['[float]', 'float', 'int']:
-                similarity[index][0] += 0.2
+                similarity[index][0] += 0.1
     elif most_common_type == 'str':
         for index, (sim, st) in enumerate(similarity):
             if st['dataType'] == 'text':
-                similarity[index][0] += 0.2
+                similarity[index][0] += 0.1
     else:
         pass
     return similarity
@@ -92,12 +99,12 @@ def data_similarity(name_similarity, counter, col_info):
             if REFRANGE.get(st['name']):
                 for v in sorted(numeric_counter.keys(), reverse=True):
                     if allow_min <= v <= allow_max:
-                        factor = 0.5
+                        factor = 0.4
                         valid_percent = numeric_counter[v] / total_values
                         legal_percent += valid_percent
                         similarity[index][0] += factor * valid_percent
             else:
-                similarity[index][0] += 0.25
+                similarity[index][0] += 0.2
             likely_name.append({
                 'name': st['name'],
                 'nameChs': st['nameChs'],
@@ -105,7 +112,7 @@ def data_similarity(name_similarity, counter, col_info):
                 'RefRange': st['defaultRefRange'],
                 'unit': st['unit'],
                 'valid_percent': round(legal_percent, 2),
-                'similarity': round(similarity[index][0], 2)
+                'similarity': 0.99 if round(similarity[index][0], 2) > 1 else round(similarity[index][0], 2)
             })
         col_info['function'] = "to_float"
     else:
@@ -113,7 +120,10 @@ def data_similarity(name_similarity, counter, col_info):
 
     sim = sorted(similarity, key=itemgetter(0), reverse=True)[:3]
     col_info['std_name'] = {'name': None, 'nameChs': None}
-    col_info['likely_name'] = likely_name
+    if likely_name:
+        col_info['likely_name'] = sorted(likely_name, key=itemgetter('similarity'), reverse=True)[:3]
+    elif sim:
+        col_info['likely_name'] = [s[1] for s in sim]
     if sim:
         if sim[0][0] > 0.5:
             col_info['std_name'] = {'name': sim[0][1]['name'], 'nameChs': sim[0][1]['nameChs']}
