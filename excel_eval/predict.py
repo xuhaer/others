@@ -131,7 +131,6 @@ def data_similarity(name_similarity, counter, col_info):
 
 def make_predict(all_data, sep='@_@'):
     res = []
-    i = 0
     for k, v in all_data.items():
         col_info = {}
         group_name, item_name = k.split(sep)
@@ -139,9 +138,7 @@ def make_predict(all_data, sep='@_@'):
         col_info['item_name'] = item_name
         name_sim = name_similarity(item_name)
         data_similarity(name_sim, Counter(v), col_info)
-        i += 1
         res.append(col_info)
-        time.sleep(0.1)
     with open('预测结果.json', 'w') as f:
         json.dump(res, f, ensure_ascii=False, indent=2)
 

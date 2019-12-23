@@ -29,8 +29,15 @@ def find_numeric(key, value):
 
 
 def to_split(key, value, sep='/'):
-    if key == '血压':
-        assert value.split(sep) == 2
-        return {'收缩压': value.split()[0], '舒张压':value.split()}
+    if key == 'BP':
+        if len(value.split(sep)) == 2:
+            systolic, diastolic = value.split()
+            try:
+                return {'systolic': int(systolic), 'diastolic':int(diastolic)}
+            except ValueError:
+                return {'systolic': None, 'diastolic': None}
+        else:
+            print(value)
+            return {'systolic': None, 'diastolic': None}
     else:
         raise ValueError(f'未配置{key}切割规则!') from None
