@@ -7,12 +7,13 @@ from operator import itemgetter
 
 import jieba
 
+from st_db import get_SampleType
 
-with open('./excel_eval/st.json') as f:
-    SAMPLETYPE = json.load(f)
 
+SAMPLETYPE = get_SampleType()
 
 with open('./excel_eval/refRange.json') as f:
+    #todo: calculate from SAMPLETYPE
     REFRANGE = json.load(f)
 
 
@@ -114,7 +115,7 @@ def data_similarity(name_similarity, counter, col_info):
                 'valid_percent': round(legal_percent, 2),
                 'similarity': 0.99 if round(similarity[index][0], 2) > 1 else round(similarity[index][0], 2)
             })
-        col_info['function'] = "to_float"
+        col_info['function'] = "find_numeric"
     else:
         col_info['function'] = "to_str"
 
@@ -125,7 +126,7 @@ def data_similarity(name_similarity, counter, col_info):
     elif sim:
         col_info['likely_name'] = [s[1] for s in sim]
     if sim:
-        if sim[0][0] > 0.5:
+        if sim[0][0] > 0.2:
             col_info['std_name'] = {'name': sim[0][1]['name'], 'nameChs': sim[0][1]['nameChs']}
     return sim
 

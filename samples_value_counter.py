@@ -36,7 +36,7 @@ def samples_value_counter():
         }
     '''
     res = {}
-    for c in collection.find({"hospital": '连云港第一人民医院'}):
+    for c in collection.find({'hospital': '爱康国宾'}):
         samples = c.get('samples')
         if not samples:
             continue
