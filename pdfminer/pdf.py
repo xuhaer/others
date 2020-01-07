@@ -54,34 +54,36 @@ def main(fn):
             else:
                 arr[idx].add(tb)
         arr.sort(key=lambda x: -x.y0)
-        for line_no, container in enumerate(arr, start=1):
+        for container in arr:
             container._objs.sort(key=lambda x: x.x0)
             line = [tb.get_text().replace('\n', '') for tb in container]
             # print(round(container.height, 2), line)
-            res.append({'page_no': page_no, 'line_no': line_no, 'data': line})
+            res.append({'page_no': page_no, 'data': line})
     return res
 
 
 
 def get_cover_info(cover_data):
-    assert cover_data[0]['data'][0].startswith('*') and cover_data[0]['data'][0].endswith('*')
-    assert cover_data[2]['data'][0] == '连云港市第一人民医院体检中心'
-    assert cover_data[5]['data'][0] == '姓    名'
-    assert cover_data[6]['data'][0] == '性    别'
-    assert cover_data[7]['data'][0] == '年    龄'
-    assert cover_data[11]['data'][0] == '体检日期'
+    assert cover_data[0]['data'][0].endswith('体检报告')
+    assert cover_data[1]['data'][0].startswith('体检号: ')
+    assert cover_data[2]['data'][0].startswith('姓  名: ')
+    assert cover_data[3]['data'][0].startswith('单  位: ')
+    assert cover_data[4]['data'][0].startswith('部  门: ')
+    assert cover_data[5]['data'][0].startswith('打印日期：2019年')
+
+    checkup_num = cover_data[1]['data'][0].split()[1]
+    assert checkup_num.startswith('19') and len(checkup_num) == 11
     basic_info = {
-        '流水号': cover_data[1]['data'][0],
-        '体检编号': cover_data[4]['data'][1],
-        '姓名': cover_data[5]['data'][1],
-        '性别': cover_data[6]['data'][1],
-        '年龄': cover_data[7]['data'][1],
-        '联系电话': cover_data[8]['data'][1] if len(cover_data[8]['data']) == 2 else None,
-        '单位': cover_data[9]['data'][1],
-        '部门': cover_data[10]['data'][1],
-        '体检日期': cover_data[11]['data'][1],
+        '体检号': checkup_num,
+        '姓名': cover_data[2]['data'][0][6:],
+        '性别': cover_data[2]['data'][1].split()[3],
+        '年龄': cover_data[2]['data'][1].split()[1],
+        '单位': cover_data[3]['data'][0][6:],
+        '部门': cover_data[4]['data'][0][6:],
+        '打印日期': cover_data[5]['data'][0][5:],
     }
     return basic_info
+
 
 def basic_info_from_content(lines):
     for line in lines:
@@ -97,15 +99,19 @@ def basic_info_from_content(lines):
 
 
 def get_flags(lines):
-    flags = {'操作员': []}
+    flags = {'项目指标锚点': []}
     for index_, line in enumerate(lines):
         data = line['data']
-        if data[0].startswith('检查综述'):
+        if data[0].startswith('一、各科检查汇总'):
             flags['检查综述起'] = index_
-        if data[0].startswith('医生建议'):
+        if data[0].startswith('二、体检结论及医生建议'):
             flags['检查综述终'] = index_
-        if data[0].startswith('操作员') or data[0].startswith('总检日期'):
-            flags['操作员'].append(index_)
+        if ('审核时间' in str(data) and lines[index_ - 1]['data'][0] != '检查结论') \
+        or '审核日期' in str(data) \
+        or (data[0].startswith('【') and data[0] != '【各科检查结果记录】'):
+            flags['项目指标锚点'].append(index_)
+    if flags.keys() != {'检查综述起', '检查综述终', '项目指标锚点'}:
+        raise ValueError('标记字段不全！')
     return flags
 
 
@@ -119,57 +125,58 @@ def get_summary(lines, flags):
 
 def get_group_names(slices):
     for sl in slices:
-        if sl['data'][0][:4] not in ['连云港市', '咨询电话', '姓名：']:
+        if sl['data'][0][:4] not in ['美好人生', '说明：如', '审核时间']:
+            # 跨页时有页眉页脚多余数据
             group_name = sl['data'][0]
             return group_name
-        else:
-            continue
-    raise ValueError('group_name 不合法！') from None
 
 
 def get_group_samples(slices):
     group_samples = []
     for samples in slices[1:]:
-        if samples['data'][0][:4] not in ['连云港市', '咨询电话', '姓名：']:
+        if samples['data'][0][:4] not in ['美好人生', '说明：如']:
             group_samples.append(samples['data'])
     return group_samples
 
 
 def parsing_common_samples(group_samples, group_name):
     res = []
+    if group_samples[0] == ['检查描述']:
+        # 彩超综述段落
+        res.append({'group_name': group_name, 'item_name': f'{group_name}描述', 'value': group_samples[1]})
+        if group_samples[3][0] == '审核时间：':
+            group_samples.pop(3)
+        res.append({'group_name': group_name, 'item_name': f'{group_name}结论', 'value': group_samples[3]})
+        return res
     for line in group_samples:
         if len(line) == 1:
             continue
         elif len(line) == 2:
             if line[0].startswith('小结：'):
-                res.append({'group_name': group_name, 'item_name': f'{group_name}小结', 'value': line[1]})
+                pass
+                # res.append({'group_name': group_name, 'item_name': f'{group_name}小结', 'value': line[1]})
             elif line[0] != '项目名称':
                 res.append({'group_name': group_name, 'item_name': line[0], 'value': line[1]})
             else:
                 continue
         elif len(line) in [3, 4, 5]:
-            if '项目名称' in str(line) or '单位' in str(line): continue
-            if ['项目名称', '检查结果', '单位', '参考值', '提示'] in group_samples:
-                refrange = None
-                # ['RBC分布宽度(CV)', '12.6', '11-16'] 无单位的情况，当然后面可有提示值
-                # ['维生素C', '-', 'nmol/L']           无参考值的情况
-                for data in line:
-                    if re.search(r'\d+\.?\d*-+\d+\.?\d*', str(data)) or (set('<=>') & set(data)):
-                        refrange = data
-                if refrange:
-                    res.append({'group_name': group_name, 'item_name': line[0], 'value': line[1], 'refrange': refrange})
-                else:
-                    res.append({'group_name': group_name, 'item_name': line[0], 'value': line[1]})
-            elif ['项目名称', '检查结果'] in group_samples: # 虽表头有两项，但有参考列
-                res.append({'group_name': group_name, 'item_name': line[0], 'value': line[1]})
+            if '项目名称' in str(line) or '单位' in str(line):
+                continue
+            refrange = None
+            for data in line:
+                if re.search(r'\d+\.?\d*-+\d+\.?\d*', str(data)) or (set('<=>') & set(data)):
+                    refrange = data
+            if refrange:
+                res.append({'group_name': group_name, 'item_name': line[0], 'value': line[1], 'refrange': refrange})
             else:
-                raise ValueError(f'体检数据未知的长度格式:{line}') from None
+                res.append({'group_name': group_name, 'item_name': line[0], 'value': line[1]})
         else:
             raise ValueError(f'体检数据未知的长度格式:{line}') from None
     return res
 
 
 def parsing_divide_samples(group_samples, group_name):
+    '''处理一行有2个指标检查项的情况'''
     res = []
     for line in group_samples:
         if len(line) == 1:
@@ -209,10 +216,11 @@ def parsing_divide_samples(group_samples, group_name):
 
 
 def parsing_samples(group_name, group_samples):
-    if '项目名称' in str(group_samples):
-        res = parsing_common_samples(group_samples, group_name)
-    else:
-        res = parsing_divide_samples(group_samples, group_name)
+    res = parsing_common_samples(group_samples, group_name)
+    # if '项目名称' in str(group_samples):
+    #     res = parsing_common_samples(group_samples, group_name)
+    # else:
+    #     res = parsing_divide_samples(group_samples, group_name)
     return res
 
 
@@ -220,10 +228,18 @@ def get_data(lines):
     flags = get_flags(lines)
     summary = get_summary(lines, flags)
     all_samples = []
-    for i in range(len(flags['操作员']) - 1):
-        slices = lines[flags['操作员'][i] + 1:flags['操作员'][i + 1]]
+    for i in range(len(flags['项目指标锚点']) - 1):
+        slices = lines[flags['项目指标锚点'][i]:flags['项目指标锚点'][i + 1]]
+        if not slices:
+            continue
         group_name = get_group_names(slices)
+        if not group_name:
+            print(f'请注意{slices} 是否为无效数据??')
+            continue
         group_samples = get_group_samples(slices)
+        if not group_samples:
+            print(f'请注意{slices} 是否为无效数据??')
+            continue
         samples = parsing_samples(group_name, group_samples)
         all_samples.extend(samples)
     return {'summary': summary, 'samples': all_samples}
@@ -232,18 +248,19 @@ def get_data(lines):
 if __name__ == '__main__':
     a = time.time()
     res = []
-    paths = glob.glob('/Users/har/Desktop/1/*.pdf')
+    paths = glob.glob('/Users/har/Desktop/盐城市中医院/*.pdf')
+    # paths = glob.glob('/Users/har/Desktop/1/*.pdf')
     for path in paths:
         lines = main(path)
         # path = '/Users/har/Desktop/连云港第一人民医院534/o2UrD0trs4XHxttg34UpfzRYKHq8.pdf'
-        print(path)
         if not lines:
             # pdf 不含文字内容，全为图片
             res.append({'file_name': path})
             continue
         cover_data = [line for line in lines if line['page_no'] == 1]
         if not cover_data:
-            basic_info = basic_info_from_content(lines)
+            raise ValueError(f'该份报告没有封面信息！----{path}')
+            # basic_info = basic_info_from_content(lines)
         else:
             basic_info = get_cover_info(cover_data)
         data = {'file_name': path, 'basic_info': basic_info}
