@@ -30,8 +30,11 @@ def find_numeric(key, value):
 
 def to_split(key, value, sep='/'):
     if key == 'BP':
+        match = re.search(r'\d+\/\d+', value) # '116/62 mmHg' --> '116/62'
+        if match:
+            value = match[0]
         if len(value.split(sep)) == 2:
-            systolic, diastolic = value.split()
+            systolic, diastolic = value.split(sep)
             try:
                 return {'systolic': int(systolic), 'diastolic':int(diastolic)}
             except ValueError:

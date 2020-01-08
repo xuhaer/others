@@ -26,5 +26,5 @@ def get_SampleType():
         SampleTypes.append(st)
     return SampleTypes
 
-with open('st_new.json', 'w') as f:
-    json.dump(SampleTypes, f, ensure_ascii=False, indent=2)
+# with open('st_new.json', 'w') as f:
+#     json.dump(SampleTypes, f, ensure_ascii=False, indent=2)
