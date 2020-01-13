@@ -1,6 +1,7 @@
 '''自定义转行规则函数'''
 
 import re
+import numbers
 
 
 def to_str(key, value):
@@ -26,6 +27,11 @@ def find_numeric(key, value):
         return to_float(key, match[0])
     else:
         return {key: None}
+
+
+def multiply_100(key, value):
+    assert isinstance(value, (numbers.Integral, float))
+    return {key: value * 100}
 
 
 def to_split(key, value, sep='/'):

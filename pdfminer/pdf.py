@@ -106,7 +106,7 @@ def get_flags(lines):
             flags['检查综述起'] = index_
         if data[0].startswith('二、体检结论及医生建议'):
             flags['检查综述终'] = index_
-        if ('审核时间' in str(data) and lines[index_ - 1]['data'][0] != '检查结论') \
+        if ('医师' in str(data) and lines[index_ - 1]['data'][0] != '检查结论') \
         or '审核日期' in str(data) \
         or (data[0].startswith('【') and data[0] != '【各科检查结果记录】'):
             flags['项目指标锚点'].append(index_)
@@ -143,10 +143,16 @@ def parsing_common_samples(group_samples, group_name):
     res = []
     if group_samples[0] == ['检查描述']:
         # 彩超综述段落
-        res.append({'group_name': group_name, 'item_name': f'{group_name}描述', 'value': group_samples[1]})
-        if group_samples[3][0] == '审核时间：':
-            group_samples.pop(3)
-        res.append({'group_name': group_name, 'item_name': f'{group_name}结论', 'value': group_samples[3]})
+        group_samples.remove(['检查描述'])
+        group_samples.remove(['检查结论'])
+        for index_, text in enumerate(group_samples):
+            if '审核时间：' in str(text) or '医师' in str(text):
+                group_samples.pop(index_)
+        if isinstance(group_samples[0], list):
+            # fix: group_samples内部的值也有可能均为列表，而且可能有多个值共同为描述字段
+            group_samples = ['\n'.join(x) for x in group_samples]
+        res.append({'group_name': group_name, 'item_name': f'{group_name}描述', 'value': '\n'.join(group_samples[:-1])})
+        res.append({'group_name': group_name, 'item_name': f'{group_name}结论', 'value': group_samples[-1]})
         return res
     for line in group_samples:
         if len(line) == 1:
@@ -234,11 +240,11 @@ def get_data(lines):
             continue
         group_name = get_group_names(slices)
         if not group_name:
-            print(f'请注意{slices} 是否为无效数据??')
+            # print(f'请注意{slices} 是否为无效数据??')
             continue
         group_samples = get_group_samples(slices)
         if not group_samples:
-            print(f'请注意{slices} 是否为无效数据??')
+            # print(f'请注意{slices} 是否为无效数据??')
             continue
         samples = parsing_samples(group_name, group_samples)
         all_samples.extend(samples)
@@ -252,7 +258,7 @@ if __name__ == '__main__':
     # paths = glob.glob('/Users/har/Desktop/1/*.pdf')
     for path in paths:
         lines = main(path)
-        # path = '/Users/har/Desktop/连云港第一人民医院534/o2UrD0trs4XHxttg34UpfzRYKHq8.pdf'
+        # path = '/Users/har/Desktop/盐城市中医院/o2UrD0tLur0lyp6HUDBY0i0HTd3s.pdf'
         if not lines:
             # pdf 不含文字内容，全为图片
             res.append({'file_name': path})
