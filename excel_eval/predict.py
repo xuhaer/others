@@ -115,7 +115,7 @@ def data_similarity(name_similarity, counter, col_info):
                 'valid_percent': round(legal_percent, 2),
                 'similarity': 0.99 if round(similarity[index][0], 2) > 1 else round(similarity[index][0], 2)
             })
-        col_info['function'] = "find_numeric"
+        col_info['function'] = "to_float"
     else:
         col_info['function'] = "to_str"
 
