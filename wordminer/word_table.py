@@ -1,5 +1,6 @@
 '''
     将.docx文档中的表格数据提取成Pandas的DataFrame
+    用于中行体检报告数据（泰州第二人民医院）
 '''
 import pandas as pd
 
@@ -11,7 +12,6 @@ from docx.text.paragraph import Paragraph
 
 
 def table_to_df(table):
-    '''用于中行体检报告数据（泰州第二人民医院）'''
     keys = None
     data = []
 
