@@ -59,13 +59,55 @@ def extract_document_data(document):
     return samples
 
 
+def get_summary(doc):
+    '''生成summary数据, 对于泰州第二人民医院, 该数据为doc.tables[-3:]中的段落字段'''
+    for table in list(doc.tables)[-3:]:
+        summary = ''
+        for row in table.rows:
+            for cell in row.cells:
+                summary += cell.text
+        if '结论及建议' in summary:
+            return summary
+    else:
+        raise ValueError('无有效的总检结论数据！')
+
+
+def get_basic_info(doc, file_name):
+    '''生成basic_info数据, 对于泰州第二人民医院, 该数据为doc.paragraphs中最前面'''
+    basic_info = {}
+    file_name = os.path.splitext(file_name)[0]
+    if '_' not in file_name:
+        return basic_info
+    name = file_name.split('_')[1]
+    basic_info['name'] = name
+    for para in doc.paragraphs[:30]:
+        line = para.text.strip()
+        if len(line) == 18:
+            basic_info['身份证'] = line
+        elif len(line) == 10 and '-' in line:
+            if '出生日期' in basic_info:
+                basic_info['体检日期'] = line
+            else:
+                basic_info['出生日期'] = line
+        elif '男' in line or '女' in line:
+            basic_info['性别'] = line
+    return basic_info
+
+
 def get_raw_data(docx_paths):
     '''生成所有docx文件有效数据的集合'''
     raw_data = []
     for docx_path in docx_paths:
         document = Document(docx_path)
         samples = extract_document_data(document)
-        raw_data.append({'file_name': os.path.basename(docx_path), 'samples': samples})
+        summary = get_summary(document)
+        basic_info = get_basic_info(document, os.path.basename(docx_path))
+        raw_data.append({
+            'file_name': os.path.basename(docx_path),
+            'basic_info': basic_info,
+            'summary': summary,
+            'samples': samples
+        })
     return raw_data
 
 
@@ -75,8 +117,8 @@ def generate_standard_data(raw_data):
     for data in raw_data:
         standard_data, std_samples = {}, []
         standard_data['file_name'] = data['file_name']
-        standard_data['basic_info'] = {}
-        standard_data['summary'] = {}
+        standard_data['basic_info'] = data['basic_info']
+        standard_data['summary'] = data['summary']
         for group_samples in data['samples']:
             for group_name, group_sample in group_samples.items():
                 try:
@@ -96,11 +138,11 @@ def generate_standard_data(raw_data):
 docx_paths = glob.glob('/Users/har/Desktop/泰州市第二人民医院144-个人docx/*.docx')
 raw_data = get_raw_data(docx_paths)
 
-with open('/Users/har/Desktop/泰州市第二人民医院144.json', 'w') as f:
-    json.dump(raw_data, f, ensure_ascii=False, indent=2)
+# with open('/Users/har/Desktop/泰州市第二人民医院144.json', 'w') as f:
+#     json.dump(raw_data, f, ensure_ascii=False, indent=2)
 
-with open('/Users/har/Desktop/泰州市第二人民医院144.json') as f:
-    raw_data = json.load(f)
-    standard_datas = generate_standard_data(raw_data)
-    with open('/Users/har/Desktop/泰州市144.json', 'w') as f:
-        json.dump(standard_datas, f, ensure_ascii=False, indent=2)
+# with open('/Users/har/Desktop/泰州市第二人民医院144.json') as f:
+#     raw_data = json.load(f)
+standard_datas = generate_standard_data(raw_data)
+with open('/Users/har/Desktop/泰州市144.json', 'w') as f:
+    json.dump(standard_datas, f, ensure_ascii=False, indent=2)
