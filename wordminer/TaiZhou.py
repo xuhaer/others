@@ -3,6 +3,7 @@
     用于中行体检报告数据（泰州第二人民医院）
 '''
 import os
+import re
 import json
 import glob
 
@@ -67,7 +68,9 @@ def get_summary(doc):
             for cell in row.cells:
                 summary += cell.text
         if '结论及建议' in summary:
-            return summary
+            # 仅要症状，不要建议，均为: '1、[高血压]' 这样的标示
+            summary = '\n'.join(re.findall(r'(\d+、\[.*\])', summary))
+            return f'结论及建议:\n{summary}'
     else:
         raise ValueError('无有效的总检结论数据！')
 
@@ -137,12 +140,7 @@ def generate_standard_data(raw_data):
 
 docx_paths = glob.glob('/Users/har/Desktop/泰州市第二人民医院144-个人docx/*.docx')
 raw_data = get_raw_data(docx_paths)
-
-# with open('/Users/har/Desktop/泰州市第二人民医院144.json', 'w') as f:
-#     json.dump(raw_data, f, ensure_ascii=False, indent=2)
-
-# with open('/Users/har/Desktop/泰州市第二人民医院144.json') as f:
-#     raw_data = json.load(f)
 standard_datas = generate_standard_data(raw_data)
+
 with open('/Users/har/Desktop/泰州市144.json', 'w') as f:
     json.dump(standard_datas, f, ensure_ascii=False, indent=2)
