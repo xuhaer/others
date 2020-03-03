@@ -96,6 +96,7 @@ def data_similarity(name_similarity, counter, col_info):
         col_info['invalid_values'] = str_cnter
         for index, (sim, st) in enumerate(similarity):
             legal_percent = 0
+            # 对于取不到REFRANGE的值所得到到相似度结果误差较大
             allow_min, allow_max = REFRANGE.get(st['name'], [-999, 999])
             if REFRANGE.get(st['name']):
                 for v in sorted(numeric_counter.keys(), reverse=True):
@@ -129,6 +130,7 @@ def data_similarity(name_similarity, counter, col_info):
         if sim[0][0] > 0.2:
             col_info['std_name'] = {'name': sim[0][1]['name'], 'nameChs': sim[0][1]['nameChs']}
     return sim
+
 
 def make_predict(all_data, sep='@_@'):
     res = []

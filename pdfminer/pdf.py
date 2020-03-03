@@ -21,7 +21,6 @@ def get_pages(fn, laparams):
         for page in PDFPage.get_pages(fp):
             interpreter.process_page(page)
             layout = device.get_result()
-            # todo 有很多封面的layout为空
             yield (element for element in layout if isinstance(element, LTTextBoxHorizontal))
 
 

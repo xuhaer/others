@@ -56,7 +56,6 @@ def extract_document_data(document):
             if not table_df.empty:
                 for v in table_df.values:
                     samples.append({table_header: dict(zip(table_df.columns, v))})
-                # samples.append(group_samples)
     return samples
 
 
@@ -85,6 +84,7 @@ def get_basic_info(doc, file_name):
     basic_info['name'] = name
     for para in doc.paragraphs[:30]:
         line = para.text.strip()
+        # todo, 改为正则匹配更靠谱
         if len(line) == 18:
             basic_info['身份证'] = line
         elif len(line) == 10 and '-' in line:
@@ -138,9 +138,9 @@ def generate_standard_data(raw_data):
     return standard_datas
 
 
-docx_paths = glob.glob('/Users/har/Desktop/泰州市第二人民医院144-个人docx/*.docx')
+docx_paths = glob.glob('～/Desktop/泰州市第二人民医院144-个人docx/*.docx')
 raw_data = get_raw_data(docx_paths)
 standard_datas = generate_standard_data(raw_data)
 
-with open('/Users/har/Desktop/泰州市144.json', 'w') as f:
+with open('～/Desktop/泰州市144.json', 'w') as f:
     json.dump(standard_datas, f, ensure_ascii=False, indent=2)

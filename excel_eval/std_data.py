@@ -61,11 +61,6 @@ def main():
         std_samples = to_std_samples(row['samples'])
         # todo 将标准 std_samples 写入mongo_db
         row.update(std_samples)
-        # for k in ['summary', 'summarize', 'advise', 'suggest', 'pe_result', 'samples']:
-        #     try:
-        #         del row[k]
-        #     except KeyError:
-        #         pass
         excel_data.append(row)
     return excel_data
 
