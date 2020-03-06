@@ -3,7 +3,7 @@ import json
 import glob
 
 
-def simplify_json(origin_path):
+def simplify_json(origin_path, dest_path):
     '''简化生成好的配置规则'''
     res = []
     with open(origin_path) as f:
@@ -28,7 +28,7 @@ def simplify_json(origin_path):
                 'std_name': {'name': st['std_name']['name']},
             })
 
-    with open('_简化版'.join(os.path.splitext(path)), 'w') as f:
+    with open(dest_path, 'w') as f:
         json.dump(res, f, ensure_ascii=False, indent=2)
 
 
@@ -51,7 +51,8 @@ def auto_correct_json_rule(origin_path, dest_path):
                     #     print(origin_st['item_name'])
                     origin_st['std_name']['name'] = ref_st['std_name']['name']
                     origin_st['function'] = ref_st['function']
-                    break
+                    if origin_st['function'] == 'find_numeric' and not origin_st.get('invalid_values'):\
+                        origin_st['function'] = 'to_float'
 
     with open(dest_path, 'w') as f:
         json.dump(origin_data, f, ensure_ascii=False, indent=2)
@@ -61,4 +62,5 @@ if __name__ == '__main__':
     for path in glob.glob('/Users/har/Desktop/预测配置结果/*.json'):
         dest_path = '_lazy'.join(os.path.splitext(path))
         auto_correct_json_rule(path, dest_path)
-        # simplify_json(dest_path)
+        # dest_path = '_精简版'.join(os.path.splitext(path))
+        # simplify_json(path, dest_path)
