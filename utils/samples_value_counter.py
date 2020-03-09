@@ -5,13 +5,15 @@ from collections import defaultdict
 import pymongo
 
 
-def connect_db():
-    mongo_client = pymongo.MongoClient(os.environ.get('Mongo_DB'))
-    mongo_db = mongo_client["test"]
-    collection = mongo_db['boc_appointment']
+HERE = os.path.dirname(__file__)
+
+
+def connect_db(mongo_db_url, db, collection):
+    mongo_client = pymongo.MongoClient(mongo_db_url)
+    mongo_db = mongo_client[db]
+    collection = mongo_db[collection]
     return collection
 
-collection = connect_db()
 
 # pipeline = [
 #     {'$unwind': '$samples'},
@@ -20,7 +22,7 @@ collection = connect_db()
 #     {'$sort': {'count': -1}}
 # ]
 
-def samples_value_counter():
+def samples_value_counter(the_collection):
     '''
         生成以item_name为key, 以samples值的统计值为值的函数，后期考虑成用pymongo的聚合函数
         如:
@@ -36,7 +38,7 @@ def samples_value_counter():
         }
     '''
     res = {}
-    for c in collection.find({'hospital': '爱康国宾'}):
+    for c in the_collection:
         samples = c.get('samples')
         if not samples:
             continue
@@ -46,9 +48,8 @@ def samples_value_counter():
             item_name = sample['detail_item_name']
             if item_name != '小结':
                 value = sample['exam_result']
-                res.setdefault(f'{group_name}@_@{item_name}', data)
-                res[f'{group_name}@_@{item_name}'][value] += 1
+                if len(value) > 20:
+                    value = f'{value[:20]}...'
+                res.setdefault(f'group_name: {group_name}, item_name:{item_name}', data)
+                res[f'group_name: {group_name}, item_name:{item_name}'][value] += 1
     return res
-
-with open('oringin_data_counter.json', 'w') as f:
-    json.dump(samples_value_counter(), f, ensure_ascii=False, indent=2)
