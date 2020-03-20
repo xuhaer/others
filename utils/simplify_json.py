@@ -15,7 +15,7 @@ def simplify_json(origin_path, dest_path):
                 'group_name': st['group_name'],
                 'item_name': st['item_name'],
                 'invalid_values': st['invalid_values'],
-                'value_type': st['value_type'],
+                'values_type_cnt': st['values_type_cnt'],
                 'function': st['function'],
                 'std_name': {'name': st['std_name']['name']},
                 })
@@ -23,7 +23,7 @@ def simplify_json(origin_path, dest_path):
             res.append({
                 'group_name': st['group_name'],
                 'item_name': st['item_name'],
-                'value_type': st['value_type'],
+                'values_type_cnt': st['values_type_cnt'],
                 'function': st['function'],
                 'std_name': {'name': st['std_name']['name']},
             })
@@ -59,8 +59,11 @@ def auto_correct_json_rule(origin_path, dest_path):
 
 
 if __name__ == '__main__':
-    for path in glob.glob('/Users/har/Desktop/预测配置结果/*.json'):
-        dest_path = '_lazy'.join(os.path.splitext(path))
-        auto_correct_json_rule(path, dest_path)
-        # dest_path = '_精简版'.join(os.path.splitext(path))
-        # simplify_json(path, dest_path)
+    dir_path = '/Users/har/Documents/jkom/HospitalDataImportUtils/Utils/data/'
+
+    # path = '/Users/har/Documents/github/others/预测结果.json'
+    # dest_path = '_lazy'.join(os.path.splitext(path))
+    # auto_correct_json_rule(path, dest_path)
+    for path in glob.glob(f'{dir_path}/*.json'):
+        dest_path = '_精简版'.join(os.path.splitext(path))
+        simplify_json(path, dest_path)

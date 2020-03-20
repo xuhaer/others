@@ -48,7 +48,7 @@ def samples_value_counter(the_collection):
             item_name = sample['detail_item_name']
             if item_name != '小结':
                 value = sample['exam_result']
-                if len(value) > 20:
+                if value and len(value) > 20:
                     value = f'{value[:20]}...'
                 res.setdefault(f'group_name: {group_name}, item_name:{item_name}', data)
                 res[f'group_name: {group_name}, item_name:{item_name}'][value] += 1
