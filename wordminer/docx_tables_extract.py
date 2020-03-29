@@ -1,15 +1,8 @@
 '''
     将.docx文档中的表格数据提取成Pandas的DataFrame
-    用于中行体检报告数据（泰州第二人民医院）
 '''
-import os
-import re
-import json
-import glob
-
 import pandas as pd
 
-from docx.api import Document
 from docx.oxml.text.paragraph import CT_P
 from docx.oxml.table import CT_Tbl
 from docx.table import Table

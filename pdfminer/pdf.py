@@ -1,10 +1,4 @@
 """Use pdfminer to extract textbox rows from PDF"""
-import os
-import re
-import json
-import time
-import glob
-
 from pdfminer.layout import LAParams, LTExpandableContainer
 from pdfminer.converter import PDFPageAggregator
 from pdfminer.pdfpage import PDFPage
